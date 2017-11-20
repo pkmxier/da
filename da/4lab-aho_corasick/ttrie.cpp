@@ -1,5 +1,4 @@
 #include "ttrie.h"
-
 TTrie::TTrie() {
     root = new TTrieNode(true);
     root->SetRoot(root);
@@ -24,7 +23,7 @@ bool TTrie::Search(std::string &str) {
 }
 
 void TTrie::BuildFailLinks() {
-
+    root->BuildFailLinks();
 }
 
 int TTrie::Count() {

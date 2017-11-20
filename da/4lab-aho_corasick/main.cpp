@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <vector>
 #include "ttrie.h"
@@ -20,13 +21,14 @@ int main() {
         std::getline(std::cin, input);
     }
 
-    while (!std::cin.eof()) {
+    tree.BuildFailLinks();
+
+
+
+    /*while (!std::cin.eof()) {
         ToLower(input);
         text.push_back(input);
         std::getline(std::cin, input);
-    }
+    }*/
 
-    for (auto i : text) {
-        std::cout << i << std::endl;
-    }
 }

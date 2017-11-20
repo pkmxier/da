@@ -4,7 +4,8 @@
 #include <string>
 
 class TTrieNode {
-private:
+//private:
+public:
     std::map<char, TTrieNode *> children;
     bool isLeaf;
     TTrieNode *failLink;
@@ -13,13 +14,15 @@ private:
 
     static int count;
     int number;
-public:
+//public:
     TTrieNode(bool leaf);
 
     void NodeInsert(std::string &str);
     bool NodeSearch(std::string &str);
     void NodeDelete(std::string &str);
-    void BuildFailLink(char x);
+    void BuildFailLinks();
+    void BuildOneFailLink(char x);
+    void SetRoot(TTrieNode *r);
     int Count();
 
     virtual ~TTrieNode();
