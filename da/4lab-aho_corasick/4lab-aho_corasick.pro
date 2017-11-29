@@ -4,9 +4,7 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    ttrienode.cpp \
     ttrie.cpp
 
 HEADERS += \
-    ttrienode.h \
     ttrie.h

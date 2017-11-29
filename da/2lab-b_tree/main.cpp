@@ -1,5 +1,6 @@
 #include <iostream>
 #include "tbtree.h"
+#include <string>
 
 int main() {
     TBTree tree(3);
@@ -8,7 +9,7 @@ int main() {
 
     std::cin.tie(NULL);
     std::ios_base::sync_with_stdio(false);
-
+    
     TString path;
     while (!std::cin.eof()) {
         TItem item;
@@ -24,7 +25,9 @@ int main() {
                 std::cin.get();
                 std::cin >> item.word;
                 std::cin >> item.val;
+                
                 result = tree.Search(item.word);
+
                 if (result != NULL) {
                     std::cout << "Exist" << '\n';
                 } else {
@@ -58,6 +61,7 @@ int main() {
                 std::cin.unget();
                 std::cin >> item.word;
                 result = tree.Search(item.word);
+                
                 if (result == NULL) {
                     std::cout << "NoSuchWord" << '\n';
                 } else {
@@ -66,6 +70,7 @@ int main() {
                 break;
         }
     }
+    
     return 0;
 }
 
