@@ -1,20 +1,29 @@
 #include "moveitem.h"
 #include <QLineF>
 #include <iostream>
+#include <QPainter>
 #include <QImage>
 
-MoveItem::MoveItem(int x, QObject *parent) :
+MoveItem::MoveItem(int x, int which_scene, QObject *parent) :
     QObject(parent), QGraphicsItem()
 {
     angle = 0;
     which = x;
     in_pos = false;
     is_locked = false;
+
+    marked = false;
+
+    this->which_scene = which_scene;
 }
 
 MoveItem::~MoveItem()
 {
 
+}
+
+bool MoveItem::isLocked() {
+    return is_locked;
 }
 
 void MoveItem::lock()
@@ -89,6 +98,8 @@ void MoveItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
     if (!is_locked) {
         this->setCursor(QCursor(Qt::ClosedHandCursor));
         Q_UNUSED(event);
+    } else {
+        emit clicked();
     }
 }
 
@@ -97,6 +108,7 @@ void MoveItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     /* При отпускании мышью элемента
      * заменяем на обычный курсор стрелку
      * */
+
     if (!is_locked) {
         this->setCursor(QCursor(Qt::ArrowCursor));
         Q_UNUSED(event);
@@ -106,18 +118,19 @@ void MoveItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
             for (int j = 0; j < 10; ++j) {
                 matrix[i][j] = {100 + i * 60, 100 + j * 60};
 
-                QLineF *line = new QLineF(matrix[i][j], this->cursor().pos());
+                QPointF cur = {this->pos().x() + 30, this->pos().y() + 30};
+                QLineF *line = new QLineF(matrix[i][j], cur);
 
                 if (which == 2 || which == 4) {
                     if (line->length() < 30) {
                         if (angle == 0) {
-                            if (matrix[i][j].y() - this->cursor().pos().y() > 0) {
+                            if (matrix[i][j].y() - cur.y() > 0) {
                                 this->setPos(matrix[i][j].x() - 30, matrix[i][j].y() - 60);
                             } else {
                                 this->setPos(matrix[i][j].x() - 30, matrix[i][j].y());
                             }
                         } else {
-                            if (matrix[i][j].x() - this->cursor().pos().x() > 0) {
+                            if (matrix[i][j].x() - cur.x() > 0) {
                                 this->setPos(matrix[i][j].x() - 60, matrix[i][j].y() - 30);
                             } else {
                                 this->setPos(matrix[i][j].x(), matrix[i][j].y() - 30);
@@ -129,8 +142,9 @@ void MoveItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
                 } else if (line->length() < 30) {
                     this->setPos(matrix[i][j].x() - 30, matrix[i][j].y() - 30);
                     in_pos = true;
-                    return;
                 }
+
+                delete line;
             }
         }
 

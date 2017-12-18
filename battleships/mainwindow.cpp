@@ -11,6 +11,7 @@
 #include <QMovie>
 #include <QLabel>
 #include <iostream>
+#include <QSignalMapper>
 #include <string>
 #include "moveitem.h"
 
@@ -21,28 +22,16 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->lineEdit->setFocus();
     ui->lineEdit->selectAll();
-}
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
+    window = new QWidget;
 
-void MainWindow::on_pushButton_clicked()
-{
-    QString username = ui->lineEdit->text();
+    layout = new QHBoxLayout;
 
-    this->close();
+    scene = new QGraphicsScene();
+    scene_2 = new QGraphicsScene();
 
-    QWidget *window = new QWidget;
-
-    QHBoxLayout *layout = new QHBoxLayout;
-
-    QGraphicsScene *scene = new QGraphicsScene();
-    QGraphicsScene *scene_2 = new QGraphicsScene();
-
-    QGraphicsView *graphicsView = new QGraphicsView();
-    QGraphicsView *graphicsView_2 = new QGraphicsView();
+    graphicsView = new QGraphicsView();
+    graphicsView_2 = new QGraphicsView();
 
     layout->addWidget(graphicsView);
     layout->addWidget(graphicsView_2);
@@ -62,10 +51,6 @@ void MainWindow::on_pushButton_clicked()
 
     scene_2->setSceneRect(scene->sceneRect());
 
-    MoveItem *item1[4];
-    MoveItem *item2[3];
-    MoveItem *item3[2];
-    MoveItem *item4;
     for (int i = 0; i < 4; ++i) {
         item1[i] = new MoveItem(1);
         item1[i]->setPos(700 + i * 60, 50);
@@ -85,7 +70,7 @@ void MainWindow::on_pushButton_clicked()
     item4->setPos(700, 530);
     scene->addItem(item4);
 
-    MoveItem *item = new MoveItem(1);
+    item = new MoveItem(1, 2);
     item->setPos(10, 30);
     scene_2->addItem(item);
 
@@ -97,7 +82,6 @@ void MainWindow::on_pushButton_clicked()
         scene_2->addLine(40, 40 + i * 60, 640, 40 + i * 60);
     }
 
-    QGraphicsTextItem *word[10];
     word[0] = scene_2->addText("A");
     word[1] = scene_2->addText("Б");
     word[2] = scene_2->addText("В");
@@ -109,7 +93,6 @@ void MainWindow::on_pushButton_clicked()
     word[8] = scene_2->addText("И");
     word[9] = scene_2->addText("К");
 
-    QGraphicsTextItem *word1[10];
     word1[0] = scene_2->addText("1");
     word1[1] = scene_2->addText("2");
     word1[2] = scene_2->addText("3");
@@ -121,7 +104,6 @@ void MainWindow::on_pushButton_clicked()
     word1[8] = scene_2->addText("9");
     word1[9] = scene_2->addText("10");
 
-    QGraphicsTextItem *left[10];
     left[0] = scene->addText("A");
     left[1] = scene->addText("Б");
     left[2] = scene->addText("В");
@@ -133,7 +115,6 @@ void MainWindow::on_pushButton_clicked()
     left[8] = scene->addText("И");
     left[9] = scene->addText("К");
 
-    QGraphicsTextItem *left1[10];
     left1[0] = scene->addText("1");
     left1[1] = scene->addText("2");
     left1[2] = scene->addText("3");
@@ -153,7 +134,7 @@ void MainWindow::on_pushButton_clicked()
         word1[i]->setPos(10, 60 + i * 60);
     }
 
-    QPushButton *start_button = new QPushButton("Start");
+    start_button = new QPushButton("Start");
     QObject::connect(start_button, SIGNAL(clicked()), item1[0], SLOT(lock()));
     QObject::connect(start_button, SIGNAL(clicked()), item1[1], SLOT(lock()));
     QObject::connect(start_button, SIGNAL(clicked()), item1[2], SLOT(lock()));
@@ -165,11 +146,65 @@ void MainWindow::on_pushButton_clicked()
     QObject::connect(start_button, SIGNAL(clicked()), item3[1], SLOT(lock()));
     QObject::connect(start_button, SIGNAL(clicked()), item4, SLOT(lock()));
 
-    QGraphicsProxyWidget *proxy_widget = scene->addWidget(start_button);
-    proxy_widget->setPos(700, 700);
 
+    for (int i = 0; i < 4; ++i) {
+        QObject::connect(item1[i], &MoveItem::clicked, this, [i, this] {
+            on_click(item1[i]);
+        });
+
+        if (i  < 3) {
+            QObject::connect(item2[i], &MoveItem::clicked, this, [i, this] {
+                on_click(item2[i]);
+            });
+        }
+
+        if (i < 2) {
+            QObject::connect(item3[i], &MoveItem::clicked, this, [i, this] {
+                on_click(item3[i]);
+            });
+        }
+    }
+
+    QObject::connect(item4, &MoveItem::clicked, this, [this] {
+        on_click(item4);
+    });
+
+    proxy_widget = scene->addWidget(start_button);
+    proxy_widget->setPos(700, 700);
     window->setLayout(layout);
-    window->showMaximized();
+    layout-> setSizeConstraint ( QLayout :: SetFixedSize ) ;
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::on_pushButton_clicked()
+{
+    QString username = ui->lineEdit->text();
+
+    this->close();
+
+    window->show();
+}
+
+void MainWindow::on_click(MoveItem *item) {
+    if (!item->marked) {
+        lines[item] = std::make_pair(new QGraphicsLineItem(item->pos().x() - 30, item->pos().y() - 30, item->pos().x() + 30, item->pos().y() + 30),
+                                     new QGraphicsLineItem(item->pos().x() - 30, item->pos().y() + 30, item->pos().x() + 30, item->pos().y() - 30));
+        scene->addItem(lines[item].first);
+        scene->addItem(lines[item].second);
+        item->marked = true;
+    } else {
+        scene->removeItem(lines[item].first);
+        scene->removeItem(lines[item].second);
+        delete lines[item].first;
+        delete lines[item].second;
+        lines.erase(item);
+        item->marked = false;
+    }
+
 }
 
 void MainWindow::on_lineEdit_returnPressed()
