@@ -13,22 +13,31 @@ class MoveItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
 public:
-    explicit MoveItem(int x, int which_scene = 1, QObject *parent = 0);
+    explicit MoveItem(int x, int which_scene = 1, int angle = 0, QObject *parent = 0);
     ~MoveItem();
 
     bool isLocked();
 
-    bool marked;
+    bool marked[10][10];
 
-signals:
+    bool in_position;
+
+    qreal getAngle();
+
+    std::pair<int, int> which_point();
+
+    int *build_ships_map();
+
+    signals:
     void locked();
     void clicked();
 
 private:
     int which;
     qreal angle;
-    bool in_pos;
     bool is_locked;
+
+    QPointF matrix[10][10];
 
     int which_scene;
 

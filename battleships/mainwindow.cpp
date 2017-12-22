@@ -19,6 +19,10 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    context = new zmq::context_t(1);
+    worker = new zmq::socket_t(*context, ZMQ_DEALER);
+
+    //
     ui->setupUi(this);
     ui->lineEdit->setFocus();
     ui->lineEdit->selectAll();
@@ -69,10 +73,6 @@ MainWindow::MainWindow(QWidget *parent) :
     item4 = new MoveItem(4);
     item4->setPos(700, 530);
     scene->addItem(item4);
-
-    item = new MoveItem(1, 2);
-    item->setPos(10, 30);
-    scene_2->addItem(item);
 
     for (int i = 0; i <= 10; ++i) {
         scene->addLine(40 + i * 60, 40, 40 + i * 60, 640);
@@ -145,6 +145,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QObject::connect(start_button, SIGNAL(clicked()), item3[0], SLOT(lock()));
     QObject::connect(start_button, SIGNAL(clicked()), item3[1], SLOT(lock()));
     QObject::connect(start_button, SIGNAL(clicked()), item4, SLOT(lock()));
+    QObject::connect(start_button, SIGNAL(clicked()), this, SLOT(send_ships_map()));
 
 
     for (int i = 0; i < 4; ++i) {
@@ -172,7 +173,7 @@ MainWindow::MainWindow(QWidget *parent) :
     proxy_widget = scene->addWidget(start_button);
     proxy_widget->setPos(700, 700);
     window->setLayout(layout);
-    layout-> setSizeConstraint ( QLayout :: SetFixedSize ) ;
+    layout->setSizeConstraint(QLayout::SetFixedSize);
 }
 
 MainWindow::~MainWindow()
@@ -182,32 +183,114 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-    QString username = ui->lineEdit->text();
+    username = ui->lineEdit->text().toStdString();
 
     this->close();
 
+    worker->setsockopt(ZMQ_IDENTITY, username.c_str(), username.size());
+    worker->connect("tcp://localhost:4040");
+
+    s_send(*worker, std::string("hi"));
+
     window->show();
+
+    std::cout << s_recv(*worker) << std::endl;
 }
 
 void MainWindow::on_click(MoveItem *item) {
-    if (!item->marked) {
-        lines[item] = std::make_pair(new QGraphicsLineItem(item->pos().x() - 30, item->pos().y() - 30, item->pos().x() + 30, item->pos().y() + 30),
-                                     new QGraphicsLineItem(item->pos().x() - 30, item->pos().y() + 30, item->pos().x() + 30, item->pos().y() - 30));
-        scene->addItem(lines[item].first);
-        scene->addItem(lines[item].second);
-        item->marked = true;
-    } else {
-        scene->removeItem(lines[item].first);
-        scene->removeItem(lines[item].second);
-        delete lines[item].first;
-        delete lines[item].second;
-        lines.erase(item);
-        item->marked = false;
-    }
+    QPoint p = graphicsView->mapFromGlobal(QCursor::pos());
 
+    QPoint matrix[10][10];
+    for (int i = 0; i < 10; ++i) {
+        for (int j = 0; j < 10; ++j) {
+            matrix[i][j] = {100 + i * 60, 100 + j * 60};
+
+            QPoint cur = {p.x() + 30, p.y() + 30};
+            QLineF *line = new QLineF(matrix[i][j], cur);
+
+            if (line->length() < 30) {
+                if (!item->marked[i][j]) {
+                    lines[i * 10 + j] = std::make_pair(new QGraphicsLineItem(matrix[i][j].x() - 60, matrix[i][j].y() - 60,
+                                                                             matrix[i][j].x(), matrix[i][j].y()),
+                                                       new QGraphicsLineItem(matrix[i][j].x() - 60, matrix[i][j].y(),
+                                                                             matrix[i][j].x(), matrix[i][j].y() - 60));
+                    lines[i * 10 + j].first->setPen(QPen(Qt::red, 5));
+                    lines[i * 10 + j].second->setPen(QPen(Qt::red, 5));
+                    scene->addItem(lines[i * 10 + j].first);
+                    scene->addItem(lines[i * 10 + j].second);
+                    item->marked[i][j] = true;
+                } else {
+                    scene->removeItem(lines[i * 10 + j].first);
+                    scene->removeItem(lines[i * 10 + j].second);
+                    delete lines[i * 10 + j].first;
+                    delete lines[i * 10 + j].second;
+                    lines.erase(i * 10 + j);
+                    item->marked[i][j] = false;
+                }
+
+            }
+
+            delete line;
+        }
+    }
 }
 
 void MainWindow::on_lineEdit_returnPressed()
 {
     this->ui->pushButton->click();
+}
+
+void MainWindow::send_ships_map() {
+    std::pair<double, double> a[10];
+
+    for (int i = 0; i < 4; ++i) {
+        a[i].first = item1[i]->x();
+        a[i].second = item1[i]->y();
+    }
+
+    for (int i = 4; i < 7; ++i) {
+        a[i].first = item2[i - 4]->x();
+        a[i].second = item2[i - 4]->y();
+    }
+
+    for (int i = 7; i < 9; ++i) {
+        a[i].first = item3[i - 7]->x();
+        a[i].second = item3[i - 7]->y();
+    }
+
+    a[9].first = item4->x();
+    a[9].second = item4->y();
+
+
+    zmq::message_t message(sizeof(a));
+    memcpy(message.data(), a, sizeof(a));
+    worker->send(message);
+
+    zmq::message_t ans;
+    worker->recv(&ans);
+    std::pair<double, double> *b = new std::pair<double, double>[10];
+    std::pair<double, double> *x =  static_cast< std::pair<double, double> *>(ans.data());
+    memcpy(b, x, ans.size());
+
+    for (int i = 0; i < 4; ++i) {
+        i1[i] = new MoveItem(1, 2);
+        i1[i]->setPos(b[i].first, b[i].second);
+        scene_2->addItem(i1[i]);
+    }
+
+    for (int i = 4; i < 7; ++i) {
+        i2[i - 4] = new MoveItem(2, 2);
+        i2[i- 4]->setPos(b[i].first, b[i].second);
+        scene_2->addItem(i2[i - 4]);
+    }
+
+    for (int i = 7; i < 9; ++i) {
+        i3[i - 7] = new MoveItem(3, 2);
+        i3[i - 7]->setPos(b[i].first, b[i].second);
+        scene_2->addItem(i3[i - 7]);
+    }
+
+    i4 = new MoveItem(4, 2);
+    i4->setPos(b[9].first, b[9].second);
+    scene_2->addItem(i4);
 }

@@ -5,8 +5,10 @@
 #-------------------------------------------------
 
 QT       += core gui
+QT       += network
 
 QMAKE_CXXFLAGS += -std=c++11
+QMAKE_LIBS += -lzmq
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -29,13 +31,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    moveitem.cpp \
-    item.cpp
+    moveitem.cpp
 
 HEADERS += \
         mainwindow.h \
-    moveitem.h \
-    item.h
+    moveitem.h
 
 FORMS += \
         mainwindow.ui

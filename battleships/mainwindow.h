@@ -17,7 +17,29 @@
 #include <string>
 #include <map>
 #include <tuple>
+#include <QTextEdit>
+#include <QTcpSocket>
+#include "zhelpers.hpp"
 #include "moveitem.h"
+
+struct ship {
+    double x;
+    double y;
+    int angle;
+
+    void operator =(ship ship_) {
+        x = ship_.x;
+        y = ship_.y;
+        angle = ship_.angle;
+    }
+};
+
+struct MessageData {
+    int clientId;
+    ship ships[10];
+    char message[128];
+    int type;
+};
 
 namespace Ui {
 class MainWindow;
@@ -33,12 +55,15 @@ public:
 
 private slots:
     void on_pushButton_clicked();
-
     void on_click(MoveItem *item);
-
     void on_lineEdit_returnPressed();
+    void send_ships_map();
+
 private:
     Ui::MainWindow *ui;
+
+    zmq::context_t *context;
+    zmq::socket_t *worker;
 
 
     QWidget *window;
@@ -58,6 +83,12 @@ private:
 
     MoveItem *item;
 
+    MoveItem *i1[4];
+    MoveItem *i2[3];
+    MoveItem *i3[2];
+    MoveItem *i4;
+
+
     QGraphicsTextItem *word[10];
 
     QGraphicsTextItem *word1[10];
@@ -72,8 +103,9 @@ private:
     QGraphicsLineItem *line1;
     QGraphicsLineItem *line2;
 
-    std::map<MoveItem *, std::pair<QGraphicsLineItem *, QGraphicsLineItem *> > lines;
+    std::map<int, std::pair<QGraphicsLineItem *, QGraphicsLineItem *> > lines;
 
+    std::string username;
 };
 
 #endif // MAINWINDOW_H
